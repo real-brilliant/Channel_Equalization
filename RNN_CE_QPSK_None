@@ -1,1 +1,108 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jul 25 14:08:13 2017
 
+@author: Administrator
+
+1.RNN
+2.QPSK
+3.
+"""
+import numpy as np
+import cmath
+from keras.models import Sequential
+from keras.layers import Dense, Activation
+from keras.optimizers import SGD
+from keras.layers.recurrent import SimpleRNN
+#import matplotlib as mpl
+#import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+#import os
+
+if __name__ == '__main__':
+    '''
+    Define Parameters
+    '''
+    T_train = 1000
+    T_test = 500
+    R = 2  #QPSK
+#    N0 = 1     # SNR = Es / N0
+    # for QPSK, Es = 2, Eb = Es / R = 1
+    SNR = 30
+    '''
+    Create Original Signals
+    '''
+    np.random.seed(1)
+    x_train = np.random.randint(0,2,T_train)*2-1 + \
+                     (np.random.randint(0,2,T_train)*2-1)*cmath.sqrt(-1)
+    x_test = np.random.randint(0,2,T_test)*2-1 + \
+                     (np.random.randint(0,2,T_test)*2-1)*cmath.sqrt(-1)
+    y_train = np.zeros((T_train,1))
+    y_test = np.zeros((T_test,1))
+    for i in range(0,T_train):
+        if x_train[i].real == 1:
+            if x_train[i].imag == 1:
+                y_train[i] = 1
+            else:
+                y_train[i] = 4
+        else:
+            if x_train[i].imag == 1:
+                y_train[i] = 2
+            else:
+                y_train[i] = 3
+    for i in range(0,T_test):
+        if x_test[i].real == 1:
+            if x_test[i].imag == 1:
+                y_test[i] = 1
+            else:
+                y_test[i] = 4
+        else:
+            if x_test[i].imag == 1:
+                y_test[i] = 2
+            else:
+                y_test[i] = 3
+                      
+    plt.scatter(x_train.real,x_train.imag,c=y_train)
+    plt.show()
+    
+    '''
+    Pass Through Channel：
+    x_train →→→ Channel →→→ z_train
+    '''
+    z1_train = x_train.copy()
+    z1_train = np.append(0,z1_train[0:T_train-1,])
+    z2_train = x_train.copy()
+    z2_train = np.append(z2_train[1:T_train],0)
+    
+    z1_test = x_test.copy()
+    z1_test = np.append(0,z1_test[0:T_test-1,])
+    z2_test = x_test.copy()
+    z2_test = np.append(z2_test[1:T_test,],0)
+    
+    z_train = np.zeros((T_train,1))
+    z_test = np.zeros((T_test,1))
+    z_train = 0.209*z1_train + 0.995*x_train + 0.209*z2_train   #linear distortion
+    z_train = z_train.reshape(-1,1)
+    z_test = 0.209*z1_test + 0.995*x_test + 0.209*z2_test
+    z_test = z_test.reshape(-1,1)
+#    c_train = np.zeros((T_train,1))
+#    c_train = c_train.astype(np.str)
+#    c_train[y_train==1]=1
+#    c_train[y_train==2]=2
+#    c_train[y_train==3]=3
+#    c_train[y_train==4]=4
+    plt.scatter(z_train.real,z_train.imag,c=y_train)
+    plt.show()
+    
+    z_train = np.tanh(z_train)  #nonlinear distortions
+    z_test = np.tanh(z_test)
+    plt.scatter(z_train.real,z_train.imag,c=y_train)
+    plt.show()
+    
+    sigma = 1 / np.sqrt(2*(10**(SNR/10)))      # variance of a single noise
+    z_train.real = z_train.real + sigma*np.random.randn(T_train,1)     # noise
+    z_train.imag = z_train.imag + sigma*np.random.randn(T_train,1)
+    z_test.real = z_test.real + sigma*np.random.randn(T_test,1)     # noise
+    z_test.imag = z_test.imag + sigma*np.random.randn(T_test,1)
+    plt.scatter(z_train.real,z_train.imag,c=y_train)
+    plt.show()
