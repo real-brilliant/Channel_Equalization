@@ -2,26 +2,16 @@
 """
 Created on Tue Jul 25 14:08:13 2017
 
-@author: Administrator
+@author: Real-Brilliant
 
-1.所采用的FBNN结构为：输出反馈到输入层
-2.调制方式：QPSK
-3.
 """
 import numpy as np
 import cmath
-from keras.models import Sequential
-from keras.layers import Dense, Activation
-from keras.optimizers import SGD
-from keras.layers.recurrent import SimpleRNN
-#import matplotlib as mpl
-#import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-#import os
 
 if __name__ == '__main__':
     '''
-    参数定义
+    Define Parameters
     '''
     T_train = 1000
     T_test = 500
@@ -30,7 +20,7 @@ if __name__ == '__main__':
     # for QPSK, Es = 2, Eb = Es / R = 1
     SNR = 30
     '''
-    生成初始数据与类别
+    Create Original Signals
     '''
     np.random.seed(1)
     x_train = np.random.randint(0,2,T_train)*2-1 + \
@@ -66,8 +56,8 @@ if __name__ == '__main__':
     plt.show()
     
     '''
-    通过信道：
-    x_train →→→ 信道 →→→ z_train
+    Pass Through Channel：
+    x_train →→→ Channel →→→ z_train
     '''
     z1_train = x_train.copy()
     z1_train = np.append(0,z1_train[0:T_train-1,])
