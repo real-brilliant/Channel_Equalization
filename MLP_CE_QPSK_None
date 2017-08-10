@@ -1,1 +1,184 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Aug 10 20:15:31 2017
 
+@author: Real-Brilliant
+"""
+
+import numpy as np
+import cmath
+from keras.models import Sequential
+from keras.layers import Dense, Activation
+from keras.optimizers import SGD
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+    '''
+    Define Parameters
+    '''
+    T_train = 10000
+    T_test = 3000
+    R = 2  #QPSK
+    SNR = 30
+    '''
+    Create Orinal Signals
+    '''
+    np.random.seed(1)
+    x_train = np.random.randint(0,2,T_train)*2-1 + \
+                     (np.random.randint(0,2,T_train)*2-1)*cmath.sqrt(-1)
+    x_test = np.random.randint(0,2,T_test)*2-1 + \
+                     (np.random.randint(0,2,T_test)*2-1)*cmath.sqrt(-1)
+    y_train = np.zeros((T_train,1))
+    y_test = np.zeros((T_test,1))
+    for i in range(0,T_train):
+        if x_train[i].real == 1:
+            if x_train[i].imag == 1:
+                y_train[i] = 1
+            else:
+                y_train[i] = 4
+        else:
+            if x_train[i].imag == 1:
+                y_train[i] = 2
+            else:
+                y_train[i] = 3
+    for i in range(0,T_test):
+        if x_test[i].real == 1:
+            if x_test[i].imag == 1:
+                y_test[i] = 1
+            else:
+                y_test[i] = 4
+        else:
+            if x_test[i].imag == 1:
+                y_test[i] = 2
+            else:
+                y_test[i] = 3
+    plt.title('Test data')
+    plt.grid(True)                  
+    plt.scatter(x_test.real,x_test.imag,c=y_test)
+    plt.show()
+    '''
+    Pass Through the Channel
+    x_train →→→ Channel →→→ z_train
+    '''
+    z1_train = x_train.copy()
+    z1_train = np.append(0,z1_train[0:T_train-1,])
+    z2_train = x_train.copy()
+    z2_train = np.append(z2_train[1:T_train],0)
+    z1_test = x_test.copy()
+    z1_test = np.append(0,z1_test[0:T_test-1,])
+    z2_test = x_test.copy()
+    z2_test = np.append(z2_test[1:T_test,],0)
+    z_train = np.zeros((T_train,1))
+    z_test = np.zeros((T_test,1))
+    z_train = 0.209*z1_train + 0.995*x_train + 0.209*z2_train   #linear distortion
+    z_train = z_train.reshape(-1,1)
+    z_test = 0.209*z1_test + 0.995*x_test + 0.209*z2_test
+    z_test = z_test.reshape(-1,1)
+    plt.title('Test data after Linear distortion')
+    plt.grid(True)   
+    plt.scatter(z_test.real,z_test.imag,c=y_test)
+    plt.show()
+    
+    z_train = np.tanh(z_train)  #nonlinear distortions
+    z_test = np.tanh(z_test)
+    plt.title('Test data after Nonlinear distortion')
+    plt.grid(True)   
+    plt.scatter(z_train.real,z_train.imag,c=y_train)
+    plt.show()
+    
+    sigma = 1 / np.sqrt(2*(10**(SNR/10)))      # variance of a single noise
+    z_train.real = z_train.real + sigma*np.random.randn(T_train,1)     # noise
+    z_train.imag = z_train.imag + sigma*np.random.randn(T_train,1)
+    z_test.real = z_test.real + sigma*np.random.randn(T_test,1)     # noise
+    z_test.imag = z_test.imag + sigma*np.random.randn(T_test,1)
+    plt.title('Test data after Adding Gaussian noise')
+    plt.grid(True)   
+    plt.scatter(z_test.real,z_test.imag,c=y_test)
+    plt.show()
+    '''
+    Normal MLP (2 input) ：
+    '''
+    inputlayer = 2
+    hidden1 = 64
+    hidden2 = 32
+    NNinput = np.hstack((z_train.real,z_train.imag))
+   
+    # real part
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model_real = Sequential()
+    model_real.add(Dense(hidden1, input_dim=inputlayer, activation='tanh'))
+    model_real.add(Dense(hidden2, activation='tanh'))
+    model_real.add(Dense(1))
+    model_real.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+    model_real.fit(NNinput,x_train.real,epochs=30,batch_size=500)
+    # imaginary part
+    model_imag = Sequential()
+    model_imag.add(Dense(hidden1, input_dim=inputlayer, activation='tanh'))
+    model_imag.add(Dense(hidden2, activation='tanh'))
+    model_imag.add(Dense(1))
+    model_imag.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+    model_imag.fit(NNinput,x_train.imag,epochs=30,batch_size=500)
+
+    trainouput_real = model_real.predict(NNinput)
+    trainouput_imag = model_imag.predict(NNinput)
+    plt.title('Training data after Channel equalization')
+    plt.grid(True)     
+    plt.scatter(trainouput_real,trainouput_imag,c=y_train)
+    plt.show()
+    
+    NNinput_test = np.hstack((z_test.real,z_test.imag))
+    testouput_real = model_real.predict(NNinput_test)
+    testouput_imag = model_imag.predict(NNinput_test)  
+    plt.title('Test data after Channel equalization')
+    plt.grid(True) 
+    plt.scatter(testouput_real,testouput_imag,c=y_test)
+    plt.show()
+#    '''
+#    Normal MLP (1 input) ：
+#    '''
+#    # real part
+#    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+#    model_real = Sequential()
+#    model_real.add(Dense(hidden1, input_dim=1, activation='tanh'))
+#    model_real.add(Dense(hidden2, activation='tanh'))
+#    model_real.add(Dense(1))
+#    model_real.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+#    model_real.fit(z_train.real,x_train.real,epochs=20,batch_size=100)
+#    # imaginary part
+#    model_imag = Sequential()
+#    model_imag.add(Dense(hidden1, input_dim=1, activation='tanh'))
+#    model_imag.add(Dense(hidden2, activation='tanh'))
+#    model_imag.add(Dense(1))
+#    model_imag.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+#    model_imag.fit(z_train.imag,x_train.imag,epochs=20,batch_size=100)
+#    
+#    testouput_real = model_real.predict(z_test.real)
+#    testouput_imag = model_imag.predict(z_test.imag) 
+#    plt.title('Test data after Channel equalization')
+#    plt.grid(True)    
+#    plt.scatter(testouput_real,testouput_imag,c=y_test)
+#    plt.show()
+
+    error0 = 0
+    for i in range(0,T_test):
+        if z_test[i].real * x_test[i].real >= 0:
+            if z_test[i].imag*x_test[i].imag >= 0:
+                error0 = error0
+            else:
+                error0 = error0 + 1
+        else:
+            error0 = error0 + 1
+    error_rate0 = error0 / T_test
+    print('poor error rate = ',error_rate0)
+    
+    error = 0
+    for i in range(0,T_test):
+        if testouput_real[i] * x_test[i].real >= 0:
+            if testouput_imag[i]*x_test[i].imag >= 0:
+                error = error
+            else:
+                error = error + 1
+        else:
+            error = error + 1
+    error_rate = error / T_test
+    print('error rate = ',error_rate)
