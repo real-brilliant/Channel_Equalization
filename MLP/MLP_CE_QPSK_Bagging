@@ -1,1 +1,169 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug  9 14:25:54 2017
 
+@author: Real-Brilliant
+"""
+import numpy as np
+import cmath
+from keras.models import Sequential
+from keras.layers import Dense, Activation
+from keras.optimizers import SGD
+import matplotlib.pyplot as plt
+    
+def Channel(T_train,T_test,SNR):
+    '''
+    Create Orinal Signals
+    '''
+    np.random.seed(1)
+    x_train = np.random.randint(0,2,T_train)*2-1 + \
+                     (np.random.randint(0,2,T_train)*2-1)*cmath.sqrt(-1)
+    x_test = np.random.randint(0,2,T_test)*2-1 + \
+                     (np.random.randint(0,2,T_test)*2-1)*cmath.sqrt(-1)
+    y_train = np.zeros((T_train,1))
+    y_test = np.zeros((T_test,1))
+    for i in range(0,T_train):
+        if x_train[i].real == 1:
+            if x_train[i].imag == 1:
+                y_train[i] = 1
+            else:
+                y_train[i] = 4
+        else:
+            if x_train[i].imag == 1:
+                y_train[i] = 2
+            else:
+                y_train[i] = 3
+    for i in range(0,T_test):
+        if x_test[i].real == 1:
+            if x_test[i].imag == 1:
+                y_test[i] = 1
+            else:
+                y_test[i] = 4
+        else:
+            if x_test[i].imag == 1:
+                y_test[i] = 2
+            else:
+                y_test[i] = 3
+    plt.title('Test data')
+    plt.grid(True)                  
+    plt.scatter(x_test.real,x_test.imag,c=y_test)
+    plt.show()
+    '''
+    Pass Through the Channel
+    x_train →→→ Channel →→→ z_train
+    '''
+    z1_train = x_train.copy()
+    z1_train = np.append(0,z1_train[0:T_train-1,])
+    z2_train = x_train.copy()
+    z2_train = np.append(z2_train[1:T_train],0)
+    z1_test = x_test.copy()
+    z1_test = np.append(0,z1_test[0:T_test-1,])
+    z2_test = x_test.copy()
+    z2_test = np.append(z2_test[1:T_test,],0)
+    z_train = np.zeros((T_train,1))
+    z_test = np.zeros((T_test,1))
+    z_train = 0.209*z1_train + 0.995*x_train + 0.209*z2_train   #linear distortion
+    z_train = z_train.reshape(-1,1)
+    z_test = 0.209*z1_test + 0.995*x_test + 0.209*z2_test
+    z_test = z_test.reshape(-1,1)
+    plt.title('Test data after Linear distortion')
+    plt.grid(True)   
+    plt.scatter(z_test.real,z_test.imag,c=y_test)
+    plt.show()
+    
+    z_train = np.tanh(z_train)  #nonlinear distortions
+    z_test = np.tanh(z_test)
+    plt.title('Test data after Nonlinear distortion')
+    plt.grid(True)   
+    plt.scatter(z_train.real,z_train.imag,c=y_train)
+    plt.show()
+    
+    sigma = 1 / np.sqrt(2*(10**(SNR/10)))      # variance of a single noise
+    z_train.real = z_train.real + sigma*np.random.randn(T_train,1)     # noise
+    z_train.imag = z_train.imag + sigma*np.random.randn(T_train,1)
+    z_test.real = z_test.real + sigma*np.random.randn(T_test,1)     # noise
+    z_test.imag = z_test.imag + sigma*np.random.randn(T_test,1)
+    plt.title('Test data after Adding Gaussian noise')
+    plt.grid(True)   
+    plt.scatter(z_test.real,z_test.imag,c=y_test)
+    plt.show()
+    return(x_train,y_train,z_train,x_test,y_test,z_test)
+
+def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size):
+    NNinput = np.hstack((z_train.real,z_train.imag))  # input training data
+    NNinput_test = np.hstack((z_test.real,z_test.imag)) # input testing data
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    Basistest_real = np.zeros((T_test,1),dtype='float32')  # (T_test,Bagging_number)
+    Basistest_imag = np.zeros((T_test,1),dtype='float32')  # (T_test,Bagging_number)
+    Baggingtest_real = np.zeros((T_test,1),dtype='float32')  # total output
+    Baggingtest_imag = np.zeros((T_test,1),dtype='float32')  # total output
+    # Training basis MLP
+    for i in range(0,Bagging):
+        Bagging_real = Sequential()
+        Bagging_real.add(Dense(hidden1, input_dim=2, activation='tanh'))
+        Bagging_real.add(Dense(hidden2, activation='tanh'))
+        Bagging_real.add(Dense(1, activation='tanh'))
+        Bagging_real.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+        Bagging_real.fit(NNinput,x_train.real,epochs=epochs,batch_size=batch_size)
+        
+        Bagging_imag = Sequential()
+        Bagging_imag.add(Dense(hidden1, input_dim=2, activation='tanh'))
+        Bagging_imag.add(Dense(hidden2, activation='tanh'))
+        Bagging_imag.add(Dense(1, activation='tanh'))
+        Bagging_imag.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
+        Bagging_imag.fit(NNinput,x_train.imag,epochs=epochs,batch_size=batch_size)
+        
+        NNoutput_real = Bagging_real.predict(NNinput_test)
+        NNoutput_imag = Bagging_imag.predict(NNinput_test)
+        # obtain predictions of a certain basis MLP
+        if i == 0:
+            Basistest_real = NNoutput_real
+            Basistest_imag = NNoutput_imag
+        else :
+            Basistest_real = np.hstack((Basistest_real,NNoutput_real)) # output of basis NN             
+            Basistest_imag = np.hstack((Basistest_imag,NNoutput_imag)) # output of basis NN  
+    # calculate final output                               
+    for i in range(0,Bagging):
+        Baggingtest_real = Baggingtest_real + Basistest_real[:,i].reshape(-1,1)
+        Baggingtest_imag = Baggingtest_imag + Basistest_imag[:,i].reshape(-1,1)
+    
+    Baggingtest_real = Baggingtest_real / Bagging
+    Baggingtest_imag = Baggingtest_imag / Bagging
+
+    # plot
+    print('Bagging - ',Bagging)
+    plt.title('Signals after equalization')
+    plt.grid(True) 
+    plt.scatter(Baggingtest_real,Baggingtest_imag,c=y_test)
+    plt.show()
+    # calculate error rate
+    confi_level = 0
+    error = 0
+    for i in range(0,T_test):
+        if Baggingtest_real[i] * x_test[i].real >= confi_level:
+            if Baggingtest_imag[i] * x_test[i].imag >= confi_level:
+                error = error
+            else:
+                error = error + 1
+        else:
+            error = error + 1
+    error_rate = error / T_test
+    print("error rate = ",error_rate)
+    
+
+if __name__ == '__main__':
+    # Parameters of Data
+    T_train = 6000
+    T_test = 2000
+    # Parameters of MLP
+    inputlayer = 2
+    hidden1 = 64
+    hidden2 = 32
+    epochs = 30
+    batch_size = 500
+    # Channel output
+    x_train,y_train,z_train,x_test,y_test,z_test = Channel(T_train,T_test,SNR=30)
+    # Output of MLP
+    MLPBagging(1,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
+    MLPBagging(3,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
+    MLPBagging(6,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
