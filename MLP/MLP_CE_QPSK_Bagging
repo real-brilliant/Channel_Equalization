@@ -126,10 +126,8 @@ def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epoc
     for i in range(0,Bagging):
         Baggingtest_real = Baggingtest_real + Basistest_real[:,i].reshape(-1,1)
         Baggingtest_imag = Baggingtest_imag + Basistest_imag[:,i].reshape(-1,1)
-    
     Baggingtest_real = Baggingtest_real / Bagging
     Baggingtest_imag = Baggingtest_imag / Bagging
-
     # plot
     print('Bagging - ',Bagging)
     plt.title('Signals after equalization')
@@ -137,19 +135,23 @@ def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epoc
     plt.scatter(Baggingtest_real,Baggingtest_imag,c=y_test)
     plt.show()
     # calculate error rate
-    confi_level = 0
+    confi_level = 0.5
     error = 0
     for i in range(0,T_test):
-        if Baggingtest_real[i] * x_test[i].real >= confi_level:
-            if Baggingtest_imag[i] * x_test[i].imag >= confi_level:
-                error = error
+        if Baggingtest_real[i] * x_test[i].real >= 0:
+            if Baggingtest_imag[i] * x_test[i].imag >= 0:
+                if np.square(Baggingtest_real[i] - x_test[i].real) + \
+                            np.square(Baggingtest_imag[i] - x_test[i].imag) \
+                                     <= np.square(confi_level):
+                    error = error
+                else:
+                    error = error + 1
             else:
                 error = error + 1
         else:
             error = error + 1
     error_rate = error / T_test
-    print("error rate = ",error_rate)
-    
+    print("error rate = ",error_rate)    
 
 if __name__ == '__main__':
     # Parameters of Data
@@ -165,5 +167,5 @@ if __name__ == '__main__':
     x_train,y_train,z_train,x_test,y_test,z_test = Channel(T_train,T_test,SNR=30)
     # Output of MLP
     MLPBagging(1,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
-    MLPBagging(3,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
-    MLPBagging(6,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
+#    MLPBagging(3,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
+#    MLPBagging(6,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
