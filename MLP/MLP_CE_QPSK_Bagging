@@ -89,7 +89,8 @@ def Channel(T_train,T_test,SNR):
     plt.show()
     return(x_train,y_train,z_train,x_test,y_test,z_test)
 
-def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size):
+def MLPBagging(Bagging,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size):
+    T_basis = int(T_train / (Bagging + 1))
     NNinput = np.hstack((z_train.real,z_train.imag))  # input training data
     NNinput_test = np.hstack((z_test.real,z_test.imag)) # input testing data
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
@@ -99,19 +100,23 @@ def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epoc
     Baggingtest_imag = np.zeros((T_test,1),dtype='float32')  # total output
     # Training basis MLP
     for i in range(0,Bagging):
+        a = i * T_basis
+        b = (i+2) * T_basis - 1
         Bagging_real = Sequential()
         Bagging_real.add(Dense(hidden1, input_dim=2, activation='tanh'))
         Bagging_real.add(Dense(hidden2, activation='tanh'))
         Bagging_real.add(Dense(1, activation='tanh'))
         Bagging_real.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
-        Bagging_real.fit(NNinput,x_train.real,epochs=epochs,batch_size=batch_size)
+        Bagging_real.fit(NNinput[a:b,:],x_train[a:b].real,
+                                 epochs=epochs,batch_size=batch_size)
         
         Bagging_imag = Sequential()
         Bagging_imag.add(Dense(hidden1, input_dim=2, activation='tanh'))
         Bagging_imag.add(Dense(hidden2, activation='tanh'))
         Bagging_imag.add(Dense(1, activation='tanh'))
         Bagging_imag.compile(loss='mse',optimizer=sgd,metrics=['accuracy'])
-        Bagging_imag.fit(NNinput,x_train.imag,epochs=epochs,batch_size=batch_size)
+        Bagging_imag.fit(NNinput[a:b,:],x_train[a:b].imag,
+                                 epochs=epochs,batch_size=batch_size)
         
         NNoutput_real = Bagging_real.predict(NNinput_test)
         NNoutput_imag = Bagging_imag.predict(NNinput_test)
@@ -155,17 +160,18 @@ def MLPBagging(Bagging,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epoc
 
 if __name__ == '__main__':
     # Parameters of Data
-    T_train = 6000
+    T_train = 9000
     T_test = 2000
     # Parameters of MLP
     inputlayer = 2
     hidden1 = 64
     hidden2 = 32
-    epochs = 30
-    batch_size = 500
+#    epochs = T_train / batch_size + 10
+    batch_size = 200
     # Channel output
-    x_train,y_train,z_train,x_test,y_test,z_test = Channel(T_train,T_test,SNR=30)
+    x_train,y_train,z_train,x_test,y_test,z_test = Channel(T_train,T_test,SNR=20)
     # Output of MLP
-    MLPBagging(1,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
-#    MLPBagging(3,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
-#    MLPBagging(6,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,epochs,batch_size)
+    MLPBagging(1,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,50,batch_size)
+#    MLPBagging(3,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,25,batch_size)
+#    MLPBagging(5,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,20,batch_size)
+#    MLPBagging(7,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,20,batch_size)
