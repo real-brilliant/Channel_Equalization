@@ -139,25 +139,33 @@ def MLPBagging(Bagging,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidd
     plt.grid(True) 
     plt.scatter(Baggingtest_real,Baggingtest_imag,c=y_test)
     plt.show()
-    # calculate error rate
-    confi_level = 0.5
-    error = 0
+#    # calculate error rate
+#    confi_level = 0.5
+#    error = 0
+#    for i in range(0,T_test):
+#        if Baggingtest_real[i] * x_test[i].real >= 0:
+#            if Baggingtest_imag[i] * x_test[i].imag >= 0:
+#                if np.square(Baggingtest_real[i] - x_test[i].real) + \
+#                            np.square(Baggingtest_imag[i] - x_test[i].imag) \
+#                                     <= np.square(confi_level):
+#                    error = error
+#                else:
+#                    error = error + 1
+#            else:
+#                error = error + 1
+#        else:
+#            error = error + 1
+#    error_rate = error / T_test
+#    print("error rate = ",error_rate)    
+    # calculate MSE
+    mse = 0
     for i in range(0,T_test):
-        if Baggingtest_real[i] * x_test[i].real >= 0:
-            if Baggingtest_imag[i] * x_test[i].imag >= 0:
-                if np.square(Baggingtest_real[i] - x_test[i].real) + \
-                            np.square(Baggingtest_imag[i] - x_test[i].imag) \
-                                     <= np.square(confi_level):
-                    error = error
-                else:
-                    error = error + 1
-            else:
-                error = error + 1
-        else:
-            error = error + 1
-    error_rate = error / T_test
-    print("error rate = ",error_rate)    
-
+        mse_single = (Baggingtest_real[i] - x_test[i].real)**2 + \
+                     (Baggingtest_imag[i] - x_test[i].imag)**2
+        mse = mse + mse_single
+    mse = mse / T_test
+    print("MSE = ",mse)
+                     
 if __name__ == '__main__':
     # Parameters of Data
     T_train = 9000
@@ -172,6 +180,6 @@ if __name__ == '__main__':
     x_train,y_train,z_train,x_test,y_test,z_test = Channel(T_train,T_test,SNR=20)
     # Output of MLP
     MLPBagging(1,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,50,batch_size)
-#    MLPBagging(3,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,25,batch_size)
-#    MLPBagging(5,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,20,batch_size)
-#    MLPBagging(7,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,20,batch_size)
+#    MLPBagging(3,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,50,batch_size)
+#    MLPBagging(5,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,50,batch_size)
+#    MLPBagging(7,T_train,T_test,x_train,z_train,z_test,y_test,hidden1,hidden2,50,batch_size)
