@@ -159,31 +159,10 @@ if __name__ == '__main__':
 #    plt.scatter(testouput_real,testouput_imag,c=y_test)
 #    plt.show()
 
-    error0 = 0
+    mse = 0
     for i in range(0,T_test):
-        if z_test[i].real * x_test[i].real >= 0:
-            if z_test[i].imag*x_test[i].imag >= 0:
-                error0 = error0
-            else:
-                error0 = error0 + 1
-        else:
-            error0 = error0 + 1
-    error_rate0 = error0 / T_test
-    print('original error rate = ',error_rate0)
-    
-    error = 0
-    for i in range(0,T_test):
-        if testouput_real[i] * x_test[i].real >= 0:
-            if testouput_imag[i]*x_test[i].imag >= 0:
-                error = error
-            else:
-                error = error + 1
-        else:
-            error = error + 1
-    error_rate = error / T_test
-    print('error rate = ',error_rate)
-    
-    len_channel = len(z_test[abs(testouput_imag)<0.5].imag)
-    len_equalization = len(testouput_imag[abs(testouput_imag)<0.5])
-    print('rate of uncertain points = ',len_channel / T_test)
-    print('rate of uncertain points after equalization = ',len_equalization / T_test)
+        mse_single = (testouput_real[i] - x_test[i].real)**2 + \
+                     (testouput_imag[i] - x_test[i].imag)**2
+        mse = mse + mse_single
+    mse = mse / T_test
+    print("MSE = ",mse)
