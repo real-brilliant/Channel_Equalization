@@ -1,0 +1,41 @@
+%% Used to create original data used for training and testing
+%% Input  -- T_train:number of training data set; T_test:number of testing data set;
+%% Output -- x_train,y_train:training data and its label; x_test,y_test:
+
+function [x_train,y_train,x_test,y_test] = create_sig(T_train,T_test)
+
+x_train = randi([0,1],T_train,1)*2-1 + 1i*(randi([0,1],T_train,1)*2-1);
+y_train = zeros(T_train,1);
+for i=1:T_train
+    if real(x_train(i)) == 1
+        if imag(x_train(i)) == 1
+            y_train(i) = 1;
+        else
+            y_train(i) = 4;
+        end
+    else
+        if imag(x_train(i)) == 1
+            y_train(i) = 2;
+        else
+            y_train(i) = 3;
+        end
+    end
+end
+
+x_test = randi([0,1],T_test,1)*2-1 + 1i*(randi([0,1],T_test,1)*2-1);
+y_test = zeros(T_test,1);
+for i=1:T_test
+    if real(x_test(i)) == 1
+        if imag(x_test(i)) == 1
+            y_test(i) = 1;
+        else
+            y_test(i) = 4;
+        end
+    else
+        if imag(x_test(i)) == 1
+            y_test(i) = 2;
+        else
+            y_test(i) = 3;
+        end
+    end
+end
