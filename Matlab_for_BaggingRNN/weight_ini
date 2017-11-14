@@ -1,0 +1,32 @@
+%% function used to initial weight
+%% weight.wabcd means: weight between bth neuron in ath layer and dth neuron in cth layer.
+
+function [weight] = weight_ini(weight,value)
+%% input layer - 2 neuron
+weight.w1121 = value;
+weight.w1122 = value;
+weight.w1123 = value;
+weight.w1221 = value;
+weight.w1222 = value;
+weight.w1223 = value;
+weight.b1 = value;
+
+%% 1 hidden layer - 3 neuron
+weight.w2131 = value;
+weight.w2231 = value;
+weight.w2331 = value;
+weight.b2 = value;
+
+%% recurrent weight
+weight.w2121 = value;
+weight.w2122 = value;
+weight.w2123 = value;
+weight.w2221 = value;
+weight.w2222 = value;
+weight.w2223 = value;
+weight.w2321 = value;
+weight.w2322 = value;
+weight.w2323 = value;
+
+%% output layer - 1
+weight.w3131 = value;
