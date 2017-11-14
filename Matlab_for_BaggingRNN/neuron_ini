@@ -1,0 +1,19 @@
+%% function used to initial neuron
+%% 
+
+function [neuron] = neuron_ini(neuron,value)
+%% input layer - 2 neuron
+neuron.n11 = value;
+neuron.n12 = value;
+
+%% 1 hidden layer - 3 neuron
+neuron.n21 = value;
+neuron.n22 = value;
+neuron.n23 = value;
+neuron.np21 = value;
+neuron.np22 = value;
+neuron.np23 = value;
+
+%% output layer - 1
+neuron.n31 = value;
+neuron.np31 = value;
