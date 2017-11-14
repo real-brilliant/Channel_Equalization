@@ -1,0 +1,42 @@
+%% Used to simulate signals after channel
+%% h(z) = 0.209 + 0.995z^-1 + 0.209z^-2
+%% Input  -- 
+%% Output -- 
+
+function [z_train,z_test] = nonlin_channel(x_train,x_test,y_test,T_train,T_test,SNR,Burst)
+%% linear distortion
+x_train_pre = [0,x_train(1:T_train-1,1)']';
+x_train_aft = [x_train(2:T_train,1)',0]';
+z_train = 0.209*x_train_pre + 0.995*x_train + 0.209*x_train_aft;
+x_test_pre = [0,x_test(1:T_test-1,1)']';
+x_test_aft = [x_test(2:T_test,1)',0]';
+z_test = 0.209*x_test_pre + 0.995*x_test + 0.209*x_test_aft;
+%% plot
+figure(2);
+scatter(real(z_test),imag(z_test),'filled','cdata',y_test);
+axis([-2 2 -2 2]);
+grid on;
+
+%% nonlinear distortion
+z_train = tanh(z_train);
+z_test = tanh(z_test);
+%% plot
+figure(3);
+scatter(real(z_test),imag(z_test),'filled','cdata',y_test);
+axis([-2 2 -2 2]);
+grid on;
+
+%% if no burst interference, add normal Gaussian noise
+sigma = 1/sqrt(2*(10^(SNR/10)));    % vaiance of Gaussian noise
+if Burst == 0
+    z_train = z_train + sigma*randn(T_train,1) + 1i*sigma*randn(T_train,1);
+    z_test = z_test + sigma*randn(T_test,1) + 1i*sigma*randn(T_test,1);
+else
+    z_train = z_train + sigma*randn(T_train,1) + 1i*sigma*randn(T_train,1);
+    z_test = z_test + sigma*randn(T_test,1) + 1i*sigma*randn(T_test,1);
+end
+%% plot
+figure(4);
+scatter(real(z_test),imag(z_test),'filled','cdata',y_test);
+axis([-2 2 -2 2]);
+grid on;
